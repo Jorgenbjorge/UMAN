@@ -1,6 +1,6 @@
-# ALTA: Ultrasound Vision-Language Pretraining and Zero-Shot Evaluation
+# UMAN: Ultrasound Vision-Language Pretraining and Zero-Shot Evaluation
 
-ALTA is a research-oriented vision-language framework for ultrasound image understanding. This repository contains the source code used to train the competition model, perform prompt-based zero-shot evaluation on multiple ultrasound classification tasks, and generate qualitative visualizations for model analysis.
+UMAN is a research-oriented vision-language framework for ultrasound image understanding. This repository contains the source code used to train the competition model, perform prompt-based zero-shot evaluation on multiple ultrasound classification tasks, and generate qualitative visualizations for model analysis.
 
 The implementation combines a Vision Transformer image encoder, a CXR-BERT text encoder, masked image and language modeling objectives, and a soft global-local manifold alignment module. The alignment module jointly models image-level and text-level semantics while establishing fine-grained correspondences between image patches and text tokens.
 
@@ -20,7 +20,6 @@ This README documents the code as it exists in this source release. Dataset file
 - [Outputs and Checkpoints](#outputs-and-checkpoints)
 - [Reproducibility Notes](#reproducibility-notes)
 - [Implementation Notes](#implementation-notes)
-- [Acknowledgements](#acknowledgements)
 
 ## Highlights
 
@@ -36,7 +35,7 @@ This README documents the code as it exists in this source release. Dataset file
 
 ### Architecture
 
-The default model is implemented by `ALTA_ViT` in `model.py`.
+UMAN is implemented by the `ALTA_ViT` class in `model.py`. The class name is a legacy source identifier retained for checkpoint and code compatibility; the model described in this release is UMAN.
 
 ```mermaid
 flowchart LR
@@ -120,7 +119,7 @@ If the MRM checkpoint is not found, the model prints a warning and does not appl
 ```text
 src/
 |-- main_pretrain.py                # Main pretraining entry point
-|-- model.py                        # ALTA model and image/text feature interfaces
+|-- model.py                        # UMAN model and image/text feature interfaces
 |-- engine_pretrain.py              # Epoch loop, optimization, logging, and diagnostics
 |-- pretrain_datasets.py            # Pretraining JSONL dataset and BUSI dataset
 |-- manifold_alignment_simple.py    # Soft global-local manifold alignment
@@ -141,6 +140,7 @@ src/
 |-- zero-shot-lymph-node.py         # Three-class lymph-node evaluation
 |-- visualization_utils.py          # Training-time and sample-level visualizations
 |-- run_visualization.py            # Standalone figure-generation workflow
+|-- requirements.txt                # Pinned Python environment dependencies
 `-- util/
     |-- misc.py                     # Distributed setup, metrics, AMP, and checkpoints
     |-- lr_sched.py                 # Warm-up and cosine learning-rate schedule
@@ -155,45 +155,19 @@ src/
 
 ### Runtime
 
-The source does not include a pinned environment file. A recent Python 3 environment with a CUDA-capable PyTorch installation is recommended. The pretraining loop uses CUDA automatic mixed precision and calls `torch.cuda.synchronize()`, so the current training implementation should be treated as CUDA-dependent.
+The pretraining loop uses CUDA automatic mixed precision and calls `torch.cuda.synchronize()`. The current training implementation therefore requires a CUDA-capable PyTorch environment.
 
-The main Python dependencies are:
-
-- PyTorch;
-- torchvision;
-- timm;
-- Hugging Face Transformers;
-- NumPy;
-- pandas;
-- Pillow;
-- scikit-learn;
-- Matplotlib; and
-- TensorBoard.
-
-### Example Environment Setup
-
-Install PyTorch and torchvision using the command appropriate for the local CUDA version, then install the remaining packages:
+The supplied `requirements.txt` pins `torch==2.9.0` and `torchvision==0.24.0`. Install the CUDA 12.8 builds of these packages first, then install the complete dependency list:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
-
 python -m pip install --upgrade pip
-# Install torch and torchvision for the required CUDA runtime first.
-python -m pip install timm transformers numpy pandas pillow scikit-learn matplotlib tensorboard
+python -m pip install torch==2.9.0 torchvision==0.24.0 --index-url https://download.pytorch.org/whl/cu128
+python -m pip install -r requirements.txt
 ```
 
-On Windows PowerShell, activate the environment with:
+Run these commands from the directory containing `requirements.txt`.
 
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-Because dependency versions are not pinned in this source release, record the resolved environment for any official reproduction run:
-
-```bash
-python -m pip freeze > environment.lock.txt
-```
+The requirements file was exported from the original development environment and contains several machine-local `file://` package references. Those references must be accessible or replaced with portable package specifications when installing on another machine.
 
 ## Pretrained Assets
 
@@ -202,19 +176,6 @@ Two external model assets are expected.
 ### 1. CXR-BERT or Compatible BERT Directory
 
 `--bert_path` must point to a local Hugging Face-compatible directory that can be loaded by both `BertTokenizer.from_pretrained()` and `CXRBertModel.from_pretrained()`.
-
-A typical directory contains files such as:
-
-```text
-Bio_ClinicalBERT/
-|-- config.json
-|-- pytorch_model.bin or model.safetensors
-|-- tokenizer_config.json
-|-- vocab.txt
-`-- special_tokens_map.json
-```
-
-The exact files depend on how the checkpoint was exported.
 
 ### 2. Masked Image Reconstruction Checkpoint
 
@@ -350,8 +311,8 @@ python main_pretrain.py \
   --image_dirs images images2 images3 \
   --bert_path /path/to/Bio_ClinicalBERT \
   --mae_path /path/to/MRM.pth \
-  --output_dir /path/to/outputs/alta \
-  --log_dir /path/to/outputs/alta/tensorboard \
+  --output_dir /path/to/outputs/uman \
+  --log_dir /path/to/outputs/uman/tensorboard \
   --batch_size 64 \
   --epochs 50 \
   --mask_ratio 0.75 \
@@ -376,8 +337,8 @@ torchrun --standalone --nproc_per_node=4 main_pretrain.py \
   --image_dirs images images2 images3 \
   --bert_path /path/to/Bio_ClinicalBERT \
   --mae_path /path/to/MRM.pth \
-  --output_dir /path/to/outputs/alta-ddp \
-  --log_dir /path/to/outputs/alta-ddp/tensorboard \
+  --output_dir /path/to/outputs/uman-ddp \
+  --log_dir /path/to/outputs/uman-ddp/tensorboard \
   --batch_size 32 \
   --accum_iter 2 \
   --epochs 50 \
@@ -388,13 +349,13 @@ torchrun --standalone --nproc_per_node=4 main_pretrain.py \
 
 ```bash
 python main_pretrain.py \
-  --resume /path/to/outputs/alta/checkpoint-best_combined.pth \
+  --resume /path/to/outputs/uman/checkpoint-best_combined.pth \
   --data_path /path/to/pretrain_data \
   --image_dirs images images2 images3 \
   --bert_path /path/to/Bio_ClinicalBERT \
   --mae_path /path/to/MRM.pth \
-  --output_dir /path/to/outputs/alta \
-  --log_dir /path/to/outputs/alta/tensorboard
+  --output_dir /path/to/outputs/uman \
+  --log_dir /path/to/outputs/uman/tensorboard
 ```
 
 By default, resume restores model, optimizer, scaler, and epoch state when those fields are present. Add `--from_begin` to load model weights without restoring the optimizer or advancing the start epoch.
@@ -427,7 +388,7 @@ Use `python main_pretrain.py --help` for the complete argument list.
 ### TensorBoard
 
 ```bash
-tensorboard --logdir /path/to/outputs/alta/tensorboard
+tensorboard --logdir /path/to/outputs/uman/tensorboard
 ```
 
 The training loop logs the three component losses, total loss, learning rate, and zero-shot BUSI metrics.
@@ -581,20 +542,7 @@ The HCC and thyroid standalone scripts also append metrics to a file named `busi
 
 ## Reproducibility Notes
 
-For an official competition reproduction, record all of the following:
-
-1. the exact Python and dependency versions;
-2. the CUDA, cuDNN, and GPU configuration;
-3. the CXR-BERT and MRM checkpoint identities or hashes;
-4. the training JSONL and image-set versions;
-5. the BUSI evaluation split used for checkpoint selection;
-6. the complete command line and effective batch size;
-7. the random seed and number of DataLoader workers; and
-8. the final checkpoint hash.
-
 The default seed is 42 and is offset by the distributed rank during pretraining. However, `cudnn.benchmark` is enabled in the training entry point, random image augmentation is active, and DataLoader workers are used. The default configuration therefore does not guarantee bitwise-deterministic results across machines.
-
-For debugging or closer repeatability, consider using a fixed software stack, a single GPU, and `--num_workers 0`. Any change to deterministic backend settings should be documented because it may alter runtime and numerical behavior.
 
 ## Implementation Notes
 
@@ -606,10 +554,3 @@ For debugging or closer repeatability, consider using a fixed software stack, a 
 - **Dataset validation:** pretraining entries with missing images are skipped; malformed JSON lines and entries without usable text are ignored.
 - **Evaluation prompts:** predictions depend on the prompt text and prompt order defined in each evaluation script. Prompt changes constitute a different evaluation configuration and should be reported.
 - **Visualization fallbacks:** standalone comparison figures may use demonstration data when a real baseline is unavailable; see the warning in the visualization section.
-
-## Acknowledgements
-
-This implementation uses PyTorch, timm Vision Transformer components, Hugging Face Transformers, and CXR-BERT-style text modeling. It also incorporates common masked autoencoder utilities for patch masking, positional embeddings, reconstruction, optimization, and distributed training.
-
-Please respect the licenses and terms of all external datasets, pretrained checkpoints, and upstream libraries used with this code.
-
