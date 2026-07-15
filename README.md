@@ -1,4 +1,4 @@
-# UMAN: Ultrasound Vision-Language Pretraining and Zero-Shot Evaluation
+# UMAN: Ultrasound Vision-Language Pretraining and Evaluation
 
 UMAN is a research-oriented vision-language framework for ultrasound image understanding. This repository contains the source code used to train the competition model, perform prompt-based zero-shot evaluation on multiple ultrasound classification tasks, and generate qualitative visualizations for model analysis.
 
